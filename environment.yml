@@ -23,7 +23,7 @@ dependencies:
   - pip:
       - biopython==1.79
       - deepspeed==0.6.0
-      - dm-tree==0.1.6
+      - dm-tree==0.1.7
       - ml-collections==0.1.0
       - numpy==1.21.2
       - PyYAML==5.4.1
