@@ -15,7 +15,7 @@ with open("README.md") as f:
 extras = {
     "esmfold": [ # OpenFold does not automatically pip install requirements, so we add them here.
         "biopython",
-        "deepspeed==0.5.9",
+        "deepspeed==0.6.0",
         "dm-tree",
         "pytorch-lightning",
         "omegaconf",
