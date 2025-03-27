@@ -16,7 +16,7 @@ extras = {
     "esmfold": [ # OpenFold does not automatically pip install requirements, so we add them here.
         "biopython",
         "deepspeed==0.6.0",
-        "dm-tree",
+        "dm-tree==0.1.7",
         "pytorch-lightning",
         "omegaconf",
         "ml-collections",
