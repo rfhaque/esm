@@ -1269,27 +1269,28 @@ def compute_distogram_conditioning(
 
     boundaries = torch.linspace(min_dist, max_dist, num_bins + 1)
 
-    for dc in input.distogram_conditioning:
-        asym_id_val = chain_id_to_asym.get(dc.chain_id)
-        if asym_id_val is None:
-            continue
-        tok_indices = asym_to_tokens[asym_id_val]
-        n_chain = len(tok_indices)
-        distogram = torch.tensor(dc.distogram, dtype=torch.float32)
+    if input.distogram_conditioning:
+        for dc in input.distogram_conditioning:
+            asym_id_val = chain_id_to_asym.get(dc.chain_id)
+            if asym_id_val is None:
+                continue
+            tok_indices = asym_to_tokens[asym_id_val]
+            n_chain = len(tok_indices)
+            distogram = torch.tensor(dc.distogram, dtype=torch.float32)
 
-        if distogram.shape != (n_chain, n_chain):
-            raise ValueError(
-                f"Distogram shape {distogram.shape} doesn't match chain length {n_chain}"
-            )
+            if distogram.shape != (n_chain, n_chain):
+                raise ValueError(
+                    f"Distogram shape {distogram.shape} doesn't match chain length {n_chain}"
+                )
 
-        # Bin the distogram
-        binned = torch.bucketize(distogram, boundaries[:-1]) - 1
-        binned = binned.clamp(0, num_bins - 1)
+            # Bin the distogram
+            binned = torch.bucketize(distogram, boundaries[:-1]) - 1
+            binned = binned.clamp(0, num_bins - 1)
 
-        for i, ti in enumerate(tok_indices):
-            for j, tj in enumerate(tok_indices):
-                disto_cond[ti, tj] = binned[i, j]
-                disto_cond_mask[ti, tj] = True
+            for i, ti in enumerate(tok_indices):
+                for j, tj in enumerate(tok_indices):
+                    disto_cond[ti, tj] = binned[i, j]
+                    disto_cond_mask[ti, tj] = True
 
     if input.atom_pair_distance_conditioning:
         chain_by_id: dict[str, ChainInfo] = {c.chain_id: c for c in chains}
