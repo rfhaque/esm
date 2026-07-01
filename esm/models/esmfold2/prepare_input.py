@@ -52,6 +52,7 @@ from esm.models.esmfold2.types import (
     DNAInput,
     LigandInput,
     Modification,
+    AtomPairDistanceConditioning,
     ProteinInput,
     RNAInput,
     StructurePredictionInput,
@@ -1236,6 +1237,7 @@ def compute_distogram_conditioning(
     input: StructurePredictionInput,
     chains: list[ChainInfo],
     tokens: list[TokenInfo],
+    atoms: list[AtomInfo],
     disto_center: torch.Tensor,
     min_dist: float = 2.0,
     max_dist: float = 22.0,
@@ -1251,7 +1253,10 @@ def compute_distogram_conditioning(
     disto_cond = torch.zeros(n_tokens, n_tokens, dtype=torch.long)
     disto_cond_mask = torch.zeros(n_tokens, n_tokens, dtype=torch.bool)
 
-    if not input.distogram_conditioning:
+    if (
+        not input.distogram_conditioning
+        and not input.atom_pair_distance_conditioning
+    ):
         return disto_cond, disto_cond_mask
 
     # Build chain_id -> asym_id mapping
@@ -1285,6 +1290,49 @@ def compute_distogram_conditioning(
             for j, tj in enumerate(tok_indices):
                 disto_cond[ti, tj] = binned[i, j]
                 disto_cond_mask[ti, tj] = True
+
+    if input.atom_pair_distance_conditioning:
+        chain_by_id: dict[str, ChainInfo] = {c.chain_id: c for c in chains}
+        chain_res_atoms: dict[tuple[int, int], list[AtomInfo]] = defaultdict(list)
+        for atom in atoms:
+            if atom.is_valid and atom.token_index < len(tokens):
+                t = tokens[atom.token_index]
+                chain_res_atoms[(t.asym_id, t.residue_index)].append(atom)
+
+        for cond in input.atom_pair_distance_conditioning:
+            c1 = chain_by_id.get(cond.chain_id1)
+            c2 = chain_by_id.get(cond.chain_id2)
+            if c1 is None or c2 is None:
+                raise ValueError(
+                    "Atom-pair distance conditioning refers to an unknown chain: "
+                    f"{cond.chain_id1!r}, {cond.chain_id2!r}"
+                )
+
+            atoms_1 = chain_res_atoms.get((c1.asym_id, cond.res_idx1), [])
+            atoms_2 = chain_res_atoms.get((c2.asym_id, cond.res_idx2), [])
+            if cond.atom_idx1 >= len(atoms_1) or cond.atom_idx1 < 0:
+                raise ValueError(
+                    "Atom-pair distance conditioning atom_idx1 is out of range for "
+                    f"chain {cond.chain_id1!r} residue {cond.res_idx1}: "
+                    f"{cond.atom_idx1}"
+                )
+            if cond.atom_idx2 >= len(atoms_2) or cond.atom_idx2 < 0:
+                raise ValueError(
+                    "Atom-pair distance conditioning atom_idx2 is out of range for "
+                    f"chain {cond.chain_id2!r} residue {cond.res_idx2}: "
+                    f"{cond.atom_idx2}"
+                )
+
+            ti = atoms_1[cond.atom_idx1].token_index
+            tj = atoms_2[cond.atom_idx2].token_index
+            binned = torch.bucketize(
+                torch.tensor(cond.distance, dtype=torch.float32), boundaries[:-1]
+            ) - 1
+            binned = int(binned.clamp(0, num_bins - 1).item())
+            disto_cond[ti, tj] = binned
+            disto_cond[tj, ti] = binned
+            disto_cond_mask[ti, tj] = True
+            disto_cond_mask[tj, ti] = True
 
     return disto_cond, disto_cond_mask
 
@@ -1417,7 +1465,7 @@ def build_feature_tensors(
     # disto_center is not needed for inference (no experimental coords)
     disto_center = torch.zeros(n_tokens, 3, dtype=torch.float32)
     disto_cond, disto_cond_mask = compute_distogram_conditioning(
-        input, chains, tokens, disto_center
+        input, chains, tokens, atoms, disto_center
     )
 
     # ref_pos: CCD conformer positions, used as-is for inference.

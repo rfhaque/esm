@@ -110,6 +110,12 @@ def clean_esmfold2_input(input: StructurePredictionInput) -> StructurePrediction
                     "Covalent bonds are not supported when using chainbreaks. "
                     "Chains must be separated into multiple ProteinInput objects."
                 )
+            if ":" in sequence and input.atom_pair_distance_conditioning is not None:
+                raise ValueError(
+                    "Sparse atom-pair distance conditioning is not supported when "
+                    "using chainbreaks. Chains must be separated into multiple "
+                    "ProteinInput objects."
+                )
 
             base_id = item.id[0] if isinstance(item.id, list) else item.id
             chain_to_ids = {}
@@ -177,6 +183,7 @@ def clean_esmfold2_input(input: StructurePredictionInput) -> StructurePrediction
     return StructurePredictionInput(
         sequences=cleaned_sequences,
         distogram_conditioning=input.distogram_conditioning,
+        atom_pair_distance_conditioning=input.atom_pair_distance_conditioning,
         covalent_bonds=input.covalent_bonds,
     )
 

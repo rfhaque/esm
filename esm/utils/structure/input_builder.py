@@ -57,6 +57,17 @@ class DistogramConditioning:
 
 
 @dataclass
+class AtomPairDistanceConditioning:
+    chain_id1: str
+    res_idx1: int
+    atom_idx1: int
+    chain_id2: str
+    res_idx2: int
+    atom_idx2: int
+    distance: float
+
+
+@dataclass
 class PocketConditioning:
     binder_chain_id: str
     contacts: list[tuple[str, int]]
@@ -77,6 +88,7 @@ class StructurePredictionInput:
     sequences: Sequence[ProteinInput | RNAInput | DNAInput | LigandInput]
     pocket: PocketConditioning | None = None
     distogram_conditioning: list[DistogramConditioning] | None = None
+    atom_pair_distance_conditioning: list[AtomPairDistanceConditioning] | None = None
     covalent_bonds: list[CovalentBond] | None = None
 
 
@@ -149,6 +161,20 @@ def serialize_structure_prediction_input(all_atom_input: StructurePredictionInpu
         result["distogram_conditioning"] = [
             {"chain_id": disto.chain_id, "distogram": disto.distogram.tolist()}
             for disto in all_atom_input.distogram_conditioning
+        ]
+
+    if all_atom_input.atom_pair_distance_conditioning is not None:
+        result["atom_pair_distance_conditioning"] = [
+            {
+                "chain_id1": cond.chain_id1,
+                "res_idx1": cond.res_idx1,
+                "atom_idx1": cond.atom_idx1,
+                "chain_id2": cond.chain_id2,
+                "res_idx2": cond.res_idx2,
+                "atom_idx2": cond.atom_idx2,
+                "distance": cond.distance,
+            }
+            for cond in all_atom_input.atom_pair_distance_conditioning
         ]
 
     return result
@@ -234,6 +260,21 @@ def deserialize_structure_prediction_input(
             for d in disto_blk
         ]
 
+    atom_pair_distance_conditioning: list[AtomPairDistanceConditioning] | None = None
+    if (atom_pair_blk := data.get("atom_pair_distance_conditioning")) is not None:
+        atom_pair_distance_conditioning = [
+            AtomPairDistanceConditioning(
+                chain_id1=c["chain_id1"],
+                res_idx1=c["res_idx1"],
+                atom_idx1=c["atom_idx1"],
+                chain_id2=c["chain_id2"],
+                res_idx2=c["res_idx2"],
+                atom_idx2=c["atom_idx2"],
+                distance=c["distance"],
+            )
+            for c in atom_pair_blk
+        ]
+
     covalent_bonds: list[CovalentBond] | None = None
     if (bonds_blk := data.get("covalent_bonds")) is not None:
         covalent_bonds = [
@@ -252,5 +293,6 @@ def deserialize_structure_prediction_input(
         sequences=sequences,
         pocket=pocket,
         distogram_conditioning=distogram_conditioning,
+        atom_pair_distance_conditioning=atom_pair_distance_conditioning,
         covalent_bonds=covalent_bonds,
     )

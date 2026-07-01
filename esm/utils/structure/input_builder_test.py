@@ -8,6 +8,7 @@ import pytest
 
 from esm.utils.msa import MSA
 from esm.utils.structure.input_builder import (
+    AtomPairDistanceConditioning,
     CovalentBond,
     DistogramConditioning,
     DNAInput,
@@ -108,6 +109,17 @@ def test_roundtrip_full_with_conditioning() -> None:
                 chain_id="A", distogram=np.arange(16).reshape(4, 4).astype(np.float32)
             )
         ],
+        atom_pair_distance_conditioning=[
+            AtomPairDistanceConditioning(
+                chain_id1="A",
+                res_idx1=0,
+                atom_idx1=1,
+                chain_id2="B",
+                res_idx2=2,
+                atom_idx2=3,
+                distance=4.0,
+            )
+        ],
         covalent_bonds=[
             CovalentBond(
                 chain_id1="A",
@@ -131,6 +143,11 @@ def test_roundtrip_full_with_conditioning() -> None:
     np.testing.assert_array_equal(
         restored.distogram_conditioning[0].distogram,
         np.arange(16).reshape(4, 4).astype(np.float32),
+    )
+    assert restored.atom_pair_distance_conditioning is not None
+    assert spi.atom_pair_distance_conditioning is not None
+    assert asdict(restored.atom_pair_distance_conditioning[0]) == asdict(
+        spi.atom_pair_distance_conditioning[0]
     )
     assert restored.covalent_bonds is not None
     assert spi.covalent_bonds is not None

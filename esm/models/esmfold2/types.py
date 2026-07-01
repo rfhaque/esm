@@ -9,6 +9,7 @@ sibling utilities. The actual definitions live in
 from esm.utils.msa import MSA
 from esm.utils.parsing import FastaEntry
 from esm.utils.structure.input_builder import (
+    AtomPairDistanceConditioning,
     CovalentBond,
     DistogramConditioning,
     DNAInput,
@@ -22,6 +23,7 @@ from esm.utils.structure.input_builder import (
 __all__ = [
     "FastaEntry",
     "MSA",
+    "AtomPairDistanceConditioning",
     "Modification",
     "ProteinInput",
     "RNAInput",

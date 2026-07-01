@@ -4,6 +4,7 @@ from esm.models.esmfold2.prepare_input import ChainInfo, prepare_esmfold2_input
 from esm.models.esmfold2.processor import ESMFold2InputBuilder, clean_esmfold2_input
 from esm.models.esmfold2.types import (
     MSA,
+    AtomPairDistanceConditioning,
     CovalentBond,
     DistogramConditioning,
     DNAInput,
@@ -21,6 +22,7 @@ from esm.utils.structure.molecular_complex import (
 
 __all__ = [
     "ChainInfo",
+    "AtomPairDistanceConditioning",
     "CovalentBond",
     "DistogramConditioning",
     "DNAInput",
